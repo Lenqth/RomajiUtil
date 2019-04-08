@@ -1,0 +1,3 @@
+C:\Users\hypar\source\repos\Typer\Typer\obj\Release\Typer.njsproj.CoreCompileInputs.cache
+C:\Users\hypar\source\repos\Typer\Typer\bin\Microsoft.NodejsTools.WebRole.dll
+C:\Users\hypar\source\repos\Typer\Typer\obj\Release\Typer.njsprojAssemblyReference.cache
