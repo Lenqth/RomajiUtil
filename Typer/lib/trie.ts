@@ -5,6 +5,10 @@ export class TrieNode<T> {
     childNodes: { [key: string]: TrieNode<T> } = {}
     value : T|null = null
 
+    hasChild(): boolean {
+        return Object.keys(this.childNodes).length > 0
+    }
+
     _addNode(str: string, k: number , v:any ) {
         if (k == str.length) {
             this.value = v
@@ -19,7 +23,7 @@ export class TrieNode<T> {
     _removeNode(str: string, k: number) {
         if (k == str.length) {
             this.value = null
-            return (this.childNodes == {})
+            return !this.hasChild()
         }
         let c = str[k]
         if (this.childNodes[c] !== undefined) {
@@ -28,7 +32,7 @@ export class TrieNode<T> {
                 delete this.childNodes[c]
             }
         }
-        return (this.childNodes == {})
+        return !this.hasChild()
     }
     constructor() {
 
@@ -69,7 +73,7 @@ export class Trie {
                 return false
             }
         }
-        return true
+        return (node.value !== null || node.hasChild() )
     }
 
     public PrefixesOf(str: string) {

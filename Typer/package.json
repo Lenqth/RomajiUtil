@@ -8,6 +8,7 @@
   },
   "devDependencies": {
     "@types/node": "^8.0.14",
+    "@types/tape": "^4.2.33",
     "tape": "^4.10.1"
   },
   "dependencies": {

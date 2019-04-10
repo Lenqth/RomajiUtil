@@ -2,6 +2,20 @@
 
 import { Trie, TrieNode  } from "../lib/trie"
 
+/*
+declare module "tape" {
+    interface Test {
+        deepEqualSet(actual: any, expected: any, msg?: string): void
+        notDeepEqualSet(actual: any, expected: any, msg?: string): void
+    }
+    test.Test.prototype.deepEqualSet = function (actual: any, expected: any, msg?: string): void {
+
+    }
+}
+*/
+
+
+
 test("Trie Add", function (t) {
     let trie = new Trie();
     trie.add("cat")
@@ -9,11 +23,58 @@ test("Trie Add", function (t) {
     trie.add("case")
     // [cat,cats,case]
 
+    //contains
     t.ok(trie.contains("cat"), "contains cat")
     t.ok(trie.contains("cats"), "contains cats")
     t.ok(trie.contains("case"), "contains case")
     t.notOk(trie.contains(""), "not contains ''")
     t.notOk(trie.contains("c"), "not contains c")
+
+    // prefix 
+    t.ok(trie.isPrefix(""))
+    t.ok(trie.isPrefix("ca"))
+    t.ok(trie.isPrefix("cat"))
+    t.ok(trie.isPrefix("cats"))
+    t.ok(trie.isPrefix("case"))
+
+    t.notOk(trie.isPrefix("cast"))
+    t.notOk(trie.isPrefix("cases"))
+    t.notOk(trie.isPrefix("nyan"))
+
+    // prefixesOf
+    t.deepEqual(trie.PrefixesOf("catseye"), ["cat", "cats"])
+    t.deepEqual(trie.PrefixesOf("case"), ["case"])
+    t.deepEqual(trie.PrefixesOf("category"), ["cat"])
+    t.deepEqual(trie.PrefixesOf("ca"), [])
+    t.deepEqual(trie.PrefixesOf("cast"), [])
+
+
+    // blank
+    trie.add("")
+    t.ok(trie.contains(""))
+    t.deepEqual(trie.PrefixesOf(""), [""])
+
+    t.end();
+});
+
+test("Empty Trie", function (t) {
+    // empty trie
+    let trie = new Trie();
+    t.notOk(trie.contains(""),"not contain anything")
+    t.notOk(trie.isPrefix(""), "no strings can be prefix")
+    t.deepEqual(trie.PrefixesOf(""), [], "no words")
+    t.deepEqual(trie.PrefixesOf("cast"), [], "no words")
+
+    // trie become empty
+    trie.add("cat")
+    trie.add("dog")
+    trie.remove("dog")
+    trie.remove("cat")
+
+    t.notOk(trie.contains(""), "not contain anything")
+    t.notOk(trie.isPrefix(""), "no strings can be prefix")
+    t.deepEqual(trie.PrefixesOf(""), [], "no words")
+    t.deepEqual(trie.PrefixesOf("cast"), [], "no words")
 
     t.end();
 });

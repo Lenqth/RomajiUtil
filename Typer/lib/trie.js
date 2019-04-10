@@ -5,6 +5,9 @@ class TrieNode {
         this.childNodes = {};
         this.value = null;
     }
+    hasChild() {
+        return Object.keys(this.childNodes).length > 0;
+    }
     _addNode(str, k, v) {
         if (k == str.length) {
             this.value = v;
@@ -19,7 +22,7 @@ class TrieNode {
     _removeNode(str, k) {
         if (k == str.length) {
             this.value = null;
-            return (this.childNodes == {});
+            return !this.hasChild();
         }
         let c = str[k];
         if (this.childNodes[c] !== undefined) {
@@ -28,7 +31,7 @@ class TrieNode {
                 delete this.childNodes[c];
             }
         }
-        return (this.childNodes == {});
+        return !this.hasChild();
     }
 }
 exports.TrieNode = TrieNode;
@@ -60,7 +63,7 @@ class Trie {
                 return false;
             }
         }
-        return true;
+        return (node.value !== null || node.hasChild());
     }
     PrefixesOf(str) {
         let node = this.root;
