@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "csv": "^5.1.1",
-    "fastpriorityqueue.ts": "^0.1.2",
-    "trie-prefix-tree": "^1.5.1"
+    "fastpriorityqueue.ts": "^0.1.2"
   }
 }

@@ -10,32 +10,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const csv_parse = require("csv-parse");
 const fs = require("fs");
-const trie = require("trie-prefix-tree");
+const trie_1 = require("./trie");
 const fastpriorityqueue_ts_1 = require("fastpriorityqueue.ts");
 function str_reverse(s) {
     return s.split("").reverse().join("");
 }
-function prefixesOf(trie, str) {
-    let prefixNode = trie.tree(); //root
-    let res = [];
-    var input = str.toLowerCase().split('');
-    var prefix = "";
-    for (let c of input) {
-        if (prefixNode["$"]) {
-            res.push(prefix);
-        }
-        if (!prefixNode[c]) {
-            break;
-        }
-        prefixNode = prefixNode[c];
-        prefix = prefix + c;
-    }
-    if (prefixNode["$"]) {
-        res.push(prefix);
-    }
-    return res;
-}
-;
 class RomajiEntry {
     constructor(roma, kana, remain) {
         this.roma = "";
@@ -52,17 +31,17 @@ class RomajiTable {
         this.table = [];
         this.roma_to_kana = {};
         this.kana_to_roma = {};
-        this.kana_trie = trie([]);
-        this.roma_trie = trie([]);
-        this.roma_rev_trie = trie([]);
+        this.kana_trie = new trie_1.Trie();
+        this.roma_trie = new trie_1.Trie();
+        this.roma_rev_trie = new trie_1.Trie();
     }
     reset() {
         this.table = [];
         this.roma_to_kana = {};
         this.kana_to_roma = {};
-        this.kana_trie = trie([]);
-        this.roma_trie = trie([]);
-        this.roma_rev_trie = trie([]);
+        this.kana_trie = new trie_1.Trie();
+        this.roma_trie = new trie_1.Trie();
+        this.roma_rev_trie = new trie_1.Trie();
     }
     addEntry(roma, kana, remain) {
         this.table.push(new RomajiEntry(roma, kana, remain));
@@ -74,15 +53,15 @@ class RomajiTable {
         }
         else {
             this.roma_to_kana[roma] = [kana, remain];
-            this.roma_trie.addWord(roma);
-            this.roma_rev_trie.addWord(str_reverse(roma));
+            this.roma_trie.add(roma);
+            this.roma_rev_trie.add(str_reverse(roma));
         }
         if (this.kana_to_roma[kana]) {
             this.kana_to_roma[kana].push([roma, remain]);
         }
         else {
             this.kana_to_roma[kana] = [[roma, remain]];
-            this.kana_trie.addWord(kana);
+            this.kana_trie.add(kana);
         }
     }
     removeEntry(roma) {
@@ -91,14 +70,14 @@ class RomajiTable {
         }
         let kana = this.roma_to_kana[roma];
         delete this.roma_to_kana[roma];
-        this.roma_trie.removeWord(roma);
-        this.roma_rev_trie.removeWord(str_reverse(roma));
+        this.roma_trie.remove(roma);
+        this.roma_rev_trie.remove(str_reverse(roma));
         let idx = this.kana_to_roma[kana].findIndex(x => x[0] == roma);
         if (idx >= 0) {
             this.kana_to_roma[kana].splice(idx, 1);
             if (this.kana_to_roma[kana].length == 0) { // remove entry if kana doesn't have corresponding roma 
                 delete this.kana_to_roma[kana];
-                this.kana_trie.removeWord(kana);
+                this.kana_trie.remove(kana);
             }
         }
     }
@@ -146,39 +125,28 @@ class Romaji {
     toKana(str) {
         let res = "";
         let pos = 0;
-        let trie = this.table.roma_rev_trie;
-        let buff = ""; // reverse 
-        let last_target = null;
+        let trie = this.table.roma_trie;
+        let conv = this.table.roma_to_kana;
+        let buff = "";
         for (let c of str) {
-            buff = c + buff;
-            let pref = prefixesOf(trie, buff);
-            if (pref.length > 0) {
-                let max_s = "";
-                let max_v = 0;
-                for (let p of pref) {
-                    if (max_v < p.length) {
-                        max_v = p.length;
-                        max_s = p;
-                    }
-                }
-                let maximal_suffix = str_reverse(max_s);
-                let buff2 = str_reverse(buff);
-                let [completed_part, remain_part] = this.table.roma_to_kana[maximal_suffix];
-                let head_part = buff2.substr(-max_v);
-                //                console.log(buff2, " : ", head_part, " : ", completed_part, " : ", remain_part)
-                if (this.table.roma_trie.countPrefix(maximal_suffix) >= 2) {
-                    // wait next input
-                    last_target = [head_part, completed_part, remain_part];
+            buff += c;
+            if (trie.isPrefix(buff)) {
+                if (trie.isStrictlyPrefix(buff)) {
+                    continue;
                 }
                 else {
-                    res += head_part + completed_part;
-                    buff = str_reverse(remain_part);
-                    last_target = null;
+                    // 変換を確定
+                    let [kana, remain] = conv[buff];
+                    res += kana;
+                    buff = remain;
                 }
             }
             else {
+                res += buff.substr(0, buff.length - 1);
+                buff = c;
             }
         }
+        res += buff;
         return res;
     }
     fromKana(str) {
@@ -198,7 +166,7 @@ class Romaji {
                 return stroke;
             }
             this._states[k][rem] = v;
-            let prefix = prefixesOf(this.table.kana_trie, str.substr(k));
+            let prefix = this.table.kana_trie.prefixesOf(str.substr(k));
             let l_rem = rem.length;
             for (let s of prefix) {
                 let entries = this.table.kana_to_roma[s];

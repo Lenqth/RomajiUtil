@@ -47,14 +47,14 @@ export class Trie {
         this.root = new TrieNode<number>();
     }
 
-    public add(key:string,value:number|null=null) {
+    public add(key: string, value: number | null = null): void{
         this.root._addNode(key,0,1)
     }
-    public remove(key: string) {
+    public remove(key: string): void {
         this.root._removeNode(key,0)
     }
 
-    public contains(str: string) {
+    public contains(str: string): boolean {
         let node = this.root
         for (let c of str) {
             node = node.childNodes[c];
@@ -65,7 +65,7 @@ export class Trie {
         return (node.value !== null)
     }
 
-    public isPrefix(str: string) {
+    public isPrefix(str: string): boolean {
         let node = this.root
         for (let c of str) {
             node = node.childNodes[c];
@@ -73,15 +73,26 @@ export class Trie {
                 return false
             }
         }
-        return (node.value !== null || node.hasChild() )
+        return (node.value !== null || node.hasChild())
     }
 
-    public PrefixesOf(str: string) {
+    public isStrictlyPrefix(str: string): boolean {
+        let node = this.root
+        for (let c of str) {
+            node = node.childNodes[c];
+            if (node === undefined) {
+                return false
+            }
+        }
+        return (node.hasChild())
+    }
+
+    public prefixesOf(str: string): Set<string>{
         let node = this.root
         let label = "";
-        let res = [];
+        let res = new Set<string>();
         if (node.value !== null) {
-            res.push(label)
+            res.add(label)
         }
         for (let c of str) {
             node = node.childNodes[c];
@@ -90,7 +101,7 @@ export class Trie {
                 break
             }
             if (node.value !== null) {
-                res.push(label)
+                res.add(label)
             }
         }
         return res

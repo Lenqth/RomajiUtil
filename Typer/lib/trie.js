@@ -65,12 +65,22 @@ class Trie {
         }
         return (node.value !== null || node.hasChild());
     }
-    PrefixesOf(str) {
+    isStrictlyPrefix(str) {
+        let node = this.root;
+        for (let c of str) {
+            node = node.childNodes[c];
+            if (node === undefined) {
+                return false;
+            }
+        }
+        return (node.hasChild());
+    }
+    prefixesOf(str) {
         let node = this.root;
         let label = "";
-        let res = [];
+        let res = new Set();
         if (node.value !== null) {
-            res.push(label);
+            res.add(label);
         }
         for (let c of str) {
             node = node.childNodes[c];
@@ -79,7 +89,7 @@ class Trie {
                 break;
             }
             if (node.value !== null) {
-                res.push(label);
+                res.add(label);
             }
         }
         return res;

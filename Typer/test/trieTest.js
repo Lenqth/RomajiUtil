@@ -13,6 +13,9 @@ declare module "tape" {
     }
 }
 */
+function set(...args) {
+    return new Set(args);
+}
 test("Trie Add", function (t) {
     let trie = new trie_1.Trie();
     trie.add("cat");
@@ -35,15 +38,15 @@ test("Trie Add", function (t) {
     t.notOk(trie.isPrefix("cases"));
     t.notOk(trie.isPrefix("nyan"));
     // prefixesOf
-    t.deepEqual(trie.PrefixesOf("catseye"), ["cat", "cats"]);
-    t.deepEqual(trie.PrefixesOf("case"), ["case"]);
-    t.deepEqual(trie.PrefixesOf("category"), ["cat"]);
-    t.deepEqual(trie.PrefixesOf("ca"), []);
-    t.deepEqual(trie.PrefixesOf("cast"), []);
+    t.deepEqual(trie.prefixesOf("catseye"), set("cat", "cats"));
+    t.deepEqual(trie.prefixesOf("case"), set("case"));
+    t.deepEqual(trie.prefixesOf("category"), set("cat"));
+    t.deepEqual(trie.prefixesOf("ca"), set());
+    t.deepEqual(trie.prefixesOf("cast"), set());
     // blank
     trie.add("");
     t.ok(trie.contains(""));
-    t.deepEqual(trie.PrefixesOf(""), [""]);
+    t.deepEqual(trie.prefixesOf(""), set(""));
     t.end();
 });
 test("Empty Trie", function (t) {
@@ -51,8 +54,8 @@ test("Empty Trie", function (t) {
     let trie = new trie_1.Trie();
     t.notOk(trie.contains(""), "not contain anything");
     t.notOk(trie.isPrefix(""), "no strings can be prefix");
-    t.deepEqual(trie.PrefixesOf(""), [], "no words");
-    t.deepEqual(trie.PrefixesOf("cast"), [], "no words");
+    t.deepEqual(trie.prefixesOf(""), set(), "no words");
+    t.deepEqual(trie.prefixesOf("cast"), set(), "no words");
     // trie become empty
     trie.add("cat");
     trie.add("dog");
@@ -60,8 +63,8 @@ test("Empty Trie", function (t) {
     trie.remove("cat");
     t.notOk(trie.contains(""), "not contain anything");
     t.notOk(trie.isPrefix(""), "no strings can be prefix");
-    t.deepEqual(trie.PrefixesOf(""), [], "no words");
-    t.deepEqual(trie.PrefixesOf("cast"), [], "no words");
+    t.deepEqual(trie.prefixesOf(""), set(), "no words");
+    t.deepEqual(trie.prefixesOf("cast"), set(), "no words");
     t.end();
 });
 test("Trie Remove", function (t) {

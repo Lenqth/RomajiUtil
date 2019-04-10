@@ -2,7 +2,6 @@
 import * as romaji from "./lib/romaji"
 //import * as romaji from "romaji"
 
-import * as __trie__ from "trie-prefix-tree"
 import { FastPriorityQueue as PriorityQueue } from "fastpriorityqueue.ts"
 
 
