@@ -37,10 +37,13 @@ function prefixesOf(trie, str) {
 }
 ;
 class RomajiEntry {
-    constructor() {
+    constructor(roma, kana, remain) {
         this.roma = "";
         this.kana = "";
         this.remain = "";
+        this.roma = roma;
+        this.kana = kana;
+        this.remain = remain;
     }
 }
 exports.RomajiEntry = RomajiEntry;
@@ -50,7 +53,54 @@ class RomajiTable {
         this.roma_to_kana = {};
         this.kana_to_roma = {};
         this.kana_trie = trie([]);
+        this.roma_trie = trie([]);
         this.roma_rev_trie = trie([]);
+    }
+    reset() {
+        this.table = [];
+        this.roma_to_kana = {};
+        this.kana_to_roma = {};
+        this.kana_trie = trie([]);
+        this.roma_trie = trie([]);
+        this.roma_rev_trie = trie([]);
+    }
+    addEntry(roma, kana, remain) {
+        this.table.push(new RomajiEntry(roma, kana, remain));
+        if (this.roma_to_kana[roma]) {
+            let [prev_k, prev_r] = this.roma_to_kana[roma];
+            if (kana !== prev_k || remain !== prev_r) {
+                throw ("Duplicate entry for Roma:" + roma);
+            }
+        }
+        else {
+            this.roma_to_kana[roma] = [kana, remain];
+            this.roma_trie.addWord(roma);
+            this.roma_rev_trie.addWord(str_reverse(roma));
+        }
+        if (this.kana_to_roma[kana]) {
+            this.kana_to_roma[kana].push([roma, remain]);
+        }
+        else {
+            this.kana_to_roma[kana] = [[roma, remain]];
+            this.kana_trie.addWord(kana);
+        }
+    }
+    removeEntry(roma) {
+        if (this.roma_to_kana[roma] == undefined) {
+            return null;
+        }
+        let kana = this.roma_to_kana[roma];
+        delete this.roma_to_kana[roma];
+        this.roma_trie.removeWord(roma);
+        this.roma_rev_trie.removeWord(str_reverse(roma));
+        let idx = this.kana_to_roma[kana].findIndex(x => x[0] == roma);
+        if (idx >= 0) {
+            this.kana_to_roma[kana].splice(idx, 1);
+            if (this.kana_to_roma[kana].length == 0) { // remove entry if kana doesn't have corresponding roma 
+                delete this.kana_to_roma[kana];
+                this.kana_trie.removeWord(kana);
+            }
+        }
     }
     static LoadFile(path) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -68,25 +118,7 @@ class RomajiTable {
                 parse.on("readable", () => {
                     let dat;
                     while (dat = parse.read()) {
-                        obj.table.push(dat);
-                        if (obj.roma_to_kana[dat.roma]) {
-                            let [prev_k, prev_r] = obj.roma_to_kana[dat.roma];
-                            if (dat.kana !== prev_k || dat.remain !== prev_r) {
-                                reject("Duplicate entry for Roma:" + dat.roma);
-                                return;
-                            }
-                        }
-                        else {
-                            obj.roma_to_kana[dat.roma] = [dat.kana, dat.remain];
-                            obj.roma_rev_trie.addWord(str_reverse(dat.roma));
-                        }
-                        if (obj.kana_to_roma[dat.kana]) {
-                            obj.kana_to_roma[dat.kana].push([dat.roma, dat.remain]);
-                        }
-                        else {
-                            obj.kana_to_roma[dat.kana] = [[dat.roma, dat.remain]];
-                            obj.kana_trie.addWord(dat.kana);
-                        }
+                        obj.addEntry(dat.roma, dat.kana, dat.remain);
                     }
                 });
                 parse.on("end", () => resolve(obj));
@@ -103,16 +135,20 @@ class RomajiTable {
 }
 exports.RomajiTable = RomajiTable;
 class Romaji {
-    constructor(table) {
+    constructor(table = null) {
         this._states = [];
         this.__queue = new fastpriorityqueue_ts_1.FastPriorityQueue();
+        if (table === null) {
+            table = new RomajiTable();
+        }
         this.table = table;
     }
     toKana(str) {
         let res = "";
         let pos = 0;
         let trie = this.table.roma_rev_trie;
-        let buff = "";
+        let buff = ""; // reverse 
+        let last_target = null;
         for (let c of str) {
             buff = c + buff;
             let pref = prefixesOf(trie, buff);
@@ -125,12 +161,22 @@ class Romaji {
                         max_s = p;
                     }
                 }
+                let maximal_suffix = str_reverse(max_s);
                 let buff2 = str_reverse(buff);
-                let [completed_part, remain_part] = this.table.roma_to_kana[str_reverse(max_s)];
+                let [completed_part, remain_part] = this.table.roma_to_kana[maximal_suffix];
                 let head_part = buff2.substr(-max_v);
-                console.log(buff2, " : ", head_part, " : ", completed_part, " : ", remain_part);
-                res += remain_part + completed_part;
-                buff = str_reverse(remain_part);
+                //                console.log(buff2, " : ", head_part, " : ", completed_part, " : ", remain_part)
+                if (this.table.roma_trie.countPrefix(maximal_suffix) >= 2) {
+                    // wait next input
+                    last_target = [head_part, completed_part, remain_part];
+                }
+                else {
+                    res += head_part + completed_part;
+                    buff = str_reverse(remain_part);
+                    last_target = null;
+                }
+            }
+            else {
             }
         }
         return res;

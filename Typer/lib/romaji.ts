@@ -3,11 +3,11 @@ import * as fs from "fs";
 import * as trie from "trie-prefix-tree"
 import { FastPriorityQueue as PriorityQueue } from "fastpriorityqueue.ts"
 
-function str_reverse(s:string):string {
+function str_reverse(s: string): string {
     return s.split("").reverse().join("");
 }
 
-function prefixesOf(trie : trie , str: string) {
+function prefixesOf(trie: trie, str: string) {
     let prefixNode = trie.tree() //root
     let res = [];
     var input = str.toLowerCase().split('');
@@ -32,27 +32,83 @@ export class RomajiEntry {
     roma: string = "";
     kana: string = "";
     remain: string = "";
+    constructor(roma, kana, remain) {
+        this.roma = roma
+        this.kana = kana
+        this.remain = remain
+    }
 }
 
 
 export class RomajiTable {
 
-    table : Array< RomajiEntry > = []
+    table: Array<RomajiEntry> = []
 
     roma_to_kana: Object = {}
 
     kana_to_roma: Object = {}
     kana_trie: any = trie([]);
     roma_trie: any = trie([]);
-    roma_rev_trie: any = trie([]);
+    roma_rev_trie: any = trie([])
+
+    public reset() {
+
+        this.table =[]
+
+        this.roma_to_kana = {}
+
+        this.kana_to_roma = {}
+        this.kana_trie  = trie([]);
+        this.roma_trie = trie([]);
+        this.roma_rev_trie = trie([])
+
+    }
+
+    public addEntry(roma: string, kana: string, remain: string) {
+        this.table.push(new RomajiEntry(roma, kana, remain))
+        if (this.roma_to_kana[roma]) {
+            let [prev_k, prev_r] = this.roma_to_kana[roma]
+            if (kana !== prev_k || remain !== prev_r) {
+                throw ("Duplicate entry for Roma:" + roma);
+            }
+        } else {
+            this.roma_to_kana[roma] = [kana, remain]
+            this.roma_trie.addWord(roma);
+            this.roma_rev_trie.addWord(str_reverse(roma));
+        }
+        if (this.kana_to_roma[kana]) {
+            this.kana_to_roma[kana].push([roma, remain])
+        } else {
+            this.kana_to_roma[kana] = [[roma, remain]]
+            this.kana_trie.addWord(kana)
+        }
+    }
+
+    public removeEntry(roma: string) {
+        if (this.roma_to_kana[roma] == undefined) {
+            return null;
+        }
+        let kana = this.roma_to_kana[roma]
+        delete this.roma_to_kana[roma]
+        this.roma_trie.removeWord(roma);
+        this.roma_rev_trie.removeWord(str_reverse(roma));
+        let idx = this.kana_to_roma[kana].findIndex(x => x[0] == roma)
+        if (idx >= 0) {
+            this.kana_to_roma[kana].splice(idx, 1)
+            if (this.kana_to_roma[kana].length == 0) { // remove entry if kana doesn't have corresponding roma 
+                delete this.kana_to_roma[kana]
+                this.kana_trie.removeWord(kana)
+            }
+        }
+    }
 
     public static async LoadFile(path: string) {
         const parse = csv_parse({
             columns: ["roma", "kana", "remain"],
             relax_column_count: true, delimiter: ",",
             skip_empty_lines: true,
-            skip_lines_with_empty_values:true,
-            record_delimiter: '\n', quote: '"', ltrim: true, rtrim: true , trim:true 
+            skip_lines_with_empty_values: true,
+            record_delimiter: '\n', quote: '"', ltrim: true, rtrim: true, trim: true
         });
         const stream = fs.createReadStream(path, { encoding: 'utf-8' })
         stream.pipe(parse)
@@ -61,24 +117,7 @@ export class RomajiTable {
             parse.on("readable", () => {
                 let dat;
                 while (dat = parse.read()) {
-                    obj.table.push(dat)
-                    if (obj.roma_to_kana[dat.roma]) {
-                        let [prev_k, prev_r] = obj.roma_to_kana[dat.roma]
-                        if (dat.kana !== prev_k || dat.remain !== prev_r) {
-                            reject("Duplicate entry for Roma:" + dat.roma);
-                            return;
-                        }
-                    } else {
-                        obj.roma_to_kana[dat.roma] = [dat.kana, dat.remain]
-                        obj.roma_trie.addWord(dat.roma);
-                        obj.roma_rev_trie.addWord(str_reverse(dat.roma));
-                    }
-                    if (obj.kana_to_roma[dat.kana]) {
-                        obj.kana_to_roma[dat.kana].push( [dat.roma, dat.remain] )
-                    } else {
-                        obj.kana_to_roma[dat.kana] = [ [dat.roma,dat.remain] ]
-                        obj.kana_trie.addWord( dat.kana )
-                    }
+                    obj.addEntry(dat.roma,dat.kana,dat.remain)
                 }
             })
             parse.on("end", () => resolve(obj))
@@ -86,7 +125,7 @@ export class RomajiTable {
         })
         try {
             return await p;
-        } catch(e){
+        } catch (e) {
             throw e;
         }
     }
@@ -102,17 +141,17 @@ export class Romaji {
     table: RomajiTable;
 
     _states: Array<Object> = [];
-    __queue: PriorityQueue< [number,string,string] > = new PriorityQueue() ;
+    __queue: PriorityQueue<[number, string, string]> = new PriorityQueue();
 
     public toKana(str: string) {
         let res = "";
         let pos = 0;
         let trie = this.table.roma_rev_trie;
         let buff = ""; // reverse 
-        let last_target: ([string, string, string])|null = null
+        let last_target: ([string, string, string]) | null = null
         for (let c of str) {
             buff = c + buff;
-            let pref = prefixesOf(trie,buff)
+            let pref = prefixesOf(trie, buff)
             if (pref.length > 0) {
                 let max_s = "";
                 let max_v = 0;
@@ -138,8 +177,8 @@ export class Romaji {
                     last_target = null
                 }
             } else {
-                
-            }      
+
+            }
         }
         return res;
     }
@@ -147,14 +186,14 @@ export class Romaji {
     public fromKana(str: string) {
         this._states = [{}];
         this.__queue = new PriorityQueue();
-        this.__queue.add([0, "",""], 0)
+        this.__queue.add([0, "", ""], 0)
         let l_str = str.length
         var q = 1;
         while (!this.__queue.isEmpty()) {
             let item = this.__queue.poll()
             let v: number = item.priority
-            let [k, rem , stroke] = item.object
-            if ( this._states[k] !== undefined && this._states[k][rem] !== undefined) {
+            let [k, rem, stroke] = item.object
+            if (this._states[k] !== undefined && this._states[k][rem] !== undefined) {
                 continue
             }
             if (k == l_str && rem == "") {
@@ -175,7 +214,7 @@ export class Romaji {
                             this._states[next_k] = {};
                         }
                         if (this._states[next_k][next_rem] === undefined) {
-                            this.__queue.add([next_k, next_rem, next_stroke ], next_v)
+                            this.__queue.add([next_k, next_rem, next_stroke], next_v)
                         }
                     }
                 }
@@ -184,7 +223,10 @@ export class Romaji {
         throw "NYAN"
     }
 
-    constructor(table: RomajiTable) {
+    constructor(table: RomajiTable | null = null) {
+        if (table === null) {
+            table = new RomajiTable();
+        }
         this.table = table;
     }
 }
